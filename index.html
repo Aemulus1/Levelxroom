@@ -8,6 +8,8 @@
 :root{color-scheme:dark;--ink:#edf0ed;--muted:#aeb8b5;--gold:#d6b77d;--glass:rgba(17,23,24,.82)}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111718;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 #view{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#levelxScreen{display:none;position:fixed;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0;z-index:1;background:#111718}
+.site-link{display:inline-block;margin-top:4px;color:#e2c98f;text-decoration:underline;font-size:12px}
 .vignette{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(4,9,10,.2),transparent 23%,transparent 72%,rgba(3,8,9,.38)),radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.24))}
 header{position:fixed;top:clamp(16px,3vw,34px);left:clamp(16px,3vw,38px);z-index:2;pointer-events:none;text-shadow:0 2px 18px #000}
 .eyebrow{font-size:10px;letter-spacing:.25em;color:#d5bd8d;text-transform:uppercase;font-weight:700}h1{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:clamp(26px,4vw,47px);letter-spacing:.015em;margin:8px 0 5px}.sub{font-size:13px;color:#d2d9d5;letter-spacing:.035em}
@@ -19,9 +21,9 @@ header{position:fixed;top:clamp(16px,3vw,34px);left:clamp(16px,3vw,38px);z-index
 </style>
 </head>
 <body>
-<canvas id="view" aria-label="Beweegbare 3D-weergave van een kunstgalerij"></canvas><div class="vignette"></div>
+<canvas id="view" aria-label="Beweegbare 3D-weergave van de leerruimte"></canvas><iframe id="levelxScreen" src="https://www.levelx.be/" title="Voorpagina van GO! Next Level X" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="vignette"></div>
 <header><div class="eyebrow">Centrale hal</div><h1>Leerruimte</h1><div class="sub">Kies een vak en stap de kamer binnen</div></header>
-<div class="info"><strong>15 × 15 meter · 6 meter hoog</strong><br><span class="coords" id="coords">Positie 0,0 m</span><br>Deuren naar aparte vakruimtes</div>
+<div class="info"><strong>15 × 15 meter · 6 meter hoog</strong><br><span class="coords" id="coords">Positie 0,0 m</span><br>Deuren naar aparte vakruimtes<br><a class="site-link" href="https://www.levelx.be/" target="_blank" rel="noopener">Open Level X apart ↗</a></div>
 <div class="help"><span class="key">↑</span> vooruit &nbsp;<span class="key">↓</span> achteruit &nbsp;<span class="key">←</span><span class="key">→</span> zijwaarts &nbsp; sleep om rond te kijken · klik op een deur om binnen te gaan</div>
 <button class="reset" id="reset" type="button">Terug naar het midden</button>
 <div class="pad" aria-label="Bewegingsknoppen"><button class="up" data-move="forward" aria-label="Vooruit">↑</button><button class="left" data-move="left" aria-label="Links">←</button><button class="down" data-move="back" aria-label="Achteruit">↓</button><button class="right" data-move="right" aria-label="Rechts">→</button></div>
@@ -63,7 +65,7 @@ function render(){
  poly([[-2.8,HEIGHT-.025,-5.6],[2.8,HEIGHT-.025,-5.6],[2.8,HEIGHT-.025,5.6],[-2.8,HEIGHT-.025,5.6]],'rgba(247,239,212,.68)');
  // Warm reflection in the otherwise calm polished floor.
  const glow=ctx.createRadialGradient(W*.5,H*.72,0,W*.5,H*.72,Math.max(W,H)*.62);glow.addColorStop(0,'rgba(255,242,205,.10)');glow.addColorStop(1,'rgba(255,242,205,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
- drawCornerStructures();
+ drawCornerStructures();updateLevelxScreen();
  coordLabel.textContent=`Positie ${px.toFixed(1)}, ${pz.toFixed(1)} m`;
 }
 function wallPanel(a,b,z,face){
@@ -106,6 +108,7 @@ function drawAffine(img,v,dst,sx,sy,sw,sh){
  const coeff=(k)=>[(q0[k]*(p1[1]-p2[1])+q1[k]*(p2[1]-p0[1])+q2[k]*(p0[1]-p1[1]))/den,(q0[k]*(p2[0]-p1[0])+q1[k]*(p0[0]-p2[0])+q2[k]*(p1[0]-p0[0]))/den,(q0[k]*(p1[0]*p2[1]-p2[0]*p1[1])+q1[k]*(p2[0]*p0[1]-p0[0]*p2[1])+q2[k]*(p0[0]*p1[1]-p1[0]*p0[1]))/den],X=coeff('x'),Y=coeff('y');
  ctx.save();ctx.beginPath();ctx.moveTo(q0.x,q0.y);ctx.lineTo(q1.x,q1.y);ctx.lineTo(q2.x,q2.y);ctx.closePath();ctx.clip();ctx.transform(X[0],Y[0],X[1],Y[1],X[2],Y[2]);ctx.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);ctx.restore();
 }
+function screenInnerQuad(cx,cz,sx,sz){const nx=-sx/Math.SQRT2,nz=-sz/Math.SQRT2,tx=nz,tz=-nx,w=2.15,bottom=1.05,top=bottom+w*9/16,offset=.88,insetX=.115,insetY=.065;const at=(side,y,extra=.012)=>[cx+nx*(offset+extra)+tx*side*w/2,y,cz+nz*(offset+extra)+tz*side*w/2];return [at(-1+2*insetX/w,bottom+insetY),at(1-2*insetX/w,bottom+insetY),at(1-2*insetX/w,top-insetY),at(-1+2*insetX/w,top-insetY)]}
 function drawCornerStructures(){
  const half=.25,items=[];
  for(const sx of [-1,1])for(const sz of [-1,1]){const x0=sx<0?-ROOM:ROOM-half,x1=x0+half*2,z0=sz<0?-ROOM:ROOM-half,z1=z0+half*2,cx=(x0+x1)/2,cz=(z0+z1)/2;items.push({sx,sz,x0,x1,z0,z1,cx,cz,d:(cx-px)**2+(cz-pz)**2})}
@@ -119,11 +122,14 @@ function drawCornerStructures(){
    // Two dark suspension arms connect each screen to the corner post.
    for(const side of [-.34,.34]){const target=[c.cx+nx*(offset-.08)+tx*side,top+.025,c.cz+nz*(offset-.08)+tz*side],anchor=[c.cx,top+.52,c.cz];line(anchor,target,'#252b2b',5);line(anchor,target,'rgba(191,177,145,.65)',1)}
    const outer=[at(-1, bottom),at(1,bottom),at(1,top),at(-1,top)];poly(outer,'#202627','rgba(183,193,188,.8)',1.2);
-   const inset=.065,inner=[at(-1+2*inset/w,bottom+inset,.012),at(1-2*inset/w,bottom+inset,.012),at(1-2*inset/w,top-inset,.012),at(-1+2*inset/w,top-inset,.012)];poly(inner,'#071114','rgba(75,112,118,.55)',.8);
+   const inner=screenInnerQuad(c.cx,c.cz,c.sx,c.sz);poly(inner,'#071114','rgba(75,112,118,.55)',.8);
    // A dim glass sheen keeps the screens visibly powered off and ready for later feeds.
    line(at(-.78,top-.16,.02),at(.18,top-.16,.02),'rgba(150,195,199,.17)',1);
  }
 }
+function solveLinearSystem(A,b){const n=b.length,M=A.map((r,i)=>[...r,b[i]]);for(let c=0;c<n;c++){let pivot=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[pivot][c]))pivot=r;if(Math.abs(M[pivot][c])<1e-9)return null;[M[c],M[pivot]]=[M[pivot],M[c]];const d=M[c][c];for(let j=c;j<=n;j++)M[c][j]/=d;for(let r=0;r<n;r++)if(r!==c){const f=M[r][c];for(let j=c;j<=n;j++)M[r][j]-=f*M[c][j]}}return M.map(r=>r[n])}
+function quadTransform(width,height,q){const src=[[0,0],[width,0],[width,height],[0,height]],A=[],b=[];for(let i=0;i<4;i++){const [x,y]=src[i],X=q[i].x,Y=q[i].y;A.push([x,y,1,0,0,0,-X*x,-X*y]);b.push(X);A.push([0,0,0,x,y,1,-Y*x,-Y*y]);b.push(Y)}const h=solveLinearSystem(A,b);if(!h)return 'none';return `matrix3d(${h[0]},${h[3]},0,${h[6]},${h[1]},${h[4]},0,${h[7]},0,0,1,0,${h[2]},${h[5]},0,1)`}
+function updateLevelxScreen(){const frame=document.querySelector('#levelxScreen'),world=screenInnerQuad(ROOM-.25,ROOM-.25,1,1),p=world.map(v=>project(...v));if(p.some(v=>!v)){frame.style.display='none';return}const top=p.slice(2,4).sort((a,b)=>a.x-b.x),bottom=p.slice(0,2).sort((a,b)=>a.x-b.x);frame.style.display='block';frame.style.transform=quadTransform(1280,720,[top[0],top[1],bottom[1],bottom[0]])}
 const DOORS=Array(6).fill('-onderwerp-');let activeSubject='';
 function drawDoor(cx,label){const z=ROOM-.035,w=.5,bottom=FLOOR_Y,top=2.1;poly([[cx-w,bottom,z],[cx+w,bottom,z],[cx+w,top,z],[cx-w,top,z]],'#927a57','rgba(68,55,39,.85)',1.5);poly([[cx-w+.07,bottom+.06,z-.008],[cx+w-.07,bottom+.06,z-.008],[cx+w-.07,top-.07,z-.008],[cx-w+.07,top-.07,z-.008]],'#3a3329','rgba(232,218,184,.36)',1);poly([[cx-w+.12,bottom+.1,z-.014],[cx+w-.12,bottom+.1,z-.014],[cx+w-.12,top-.13,z-.014],[cx-w+.12,top-.13,z-.014]],'#64543e');const plaque=project(cx,2.33,z-.06);if(plaque){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`600 ${Math.max(8,Math.min(14,plaque.d*1.55))}px system-ui`;ctx.fillStyle='#f0e3c4';ctx.shadowColor='#1b1a16';ctx.shadowBlur=5;ctx.fillText(label,plaque.x,plaque.y);ctx.restore()}}
 function update(dt){let f=0,s=0;if(keys.has('ArrowUp')||keys.has('w'))f++;if(keys.has('ArrowDown')||keys.has('s'))f--;if(keys.has('ArrowLeft')||keys.has('a'))s--;if(keys.has('ArrowRight')||keys.has('d'))s++;for(const k of held){if(k==='forward')f++;if(k==='back')f--;if(k==='left')s--;if(k==='right')s++}if(f||s){const n=Math.hypot(f,s);f/=n;s/=n;const speed=3.15*dt,dx=Math.sin(yaw)*f+Math.cos(yaw)*s,dz=Math.cos(yaw)*f-Math.sin(yaw)*s;px=Math.max(-ROOM+.65,Math.min(ROOM-.65,px+dx*speed));pz=Math.max(-ROOM+.65,Math.min(ROOM-.65,pz+dz*speed))}}
