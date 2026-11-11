@@ -8,7 +8,7 @@
 :root{color-scheme:dark;--ink:#edf0ed;--muted:#aeb8b5;--gold:#d6b77d;--glass:rgba(17,23,24,.82)}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111718;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 #view{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#levelxScreen{display:none;position:fixed;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0;z-index:1;background:#111718}
+.wall-screen{display:none;position:fixed;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0;z-index:1;background:#111718}
 .site-link{display:inline-block;margin-top:4px;color:#e2c98f;text-decoration:underline;font-size:12px}
 .vignette{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(4,9,10,.2),transparent 23%,transparent 72%,rgba(3,8,9,.38)),radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.24))}
 header{position:fixed;top:clamp(16px,3vw,34px);left:clamp(16px,3vw,38px);z-index:2;pointer-events:none;text-shadow:0 2px 18px #000}
@@ -21,7 +21,11 @@ header{position:fixed;top:clamp(16px,3vw,34px);left:clamp(16px,3vw,38px);z-index
 </style>
 </head>
 <body>
-<canvas id="view" aria-label="Beweegbare 3D-weergave van de leerruimte"></canvas><iframe id="levelxScreen" src="https://www.levelx.be/" title="Voorpagina van GO! Next Level X" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="vignette"></div>
+<canvas id="view" aria-label="Beweegbare 3D-weergave van de leerruimte"></canvas>
+<iframe class="wall-screen" id="screenLevelX" src="https://www.levelx.be/" title="Voorpagina van GO! Next Level X" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<iframe class="wall-screen" id="screenHbvl" src="https://news.google.com/search?q=site%3Ahbvl.be&amp;hl=nl&amp;gl=BE&amp;ceid=BE%3Anl" title="Google Nieuws: Het Belang van Limburg" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<iframe class="wall-screen" id="screenLearning" src="https://news.google.com/search?q=%22leren+leren%22&amp;hl=nl&amp;gl=BE&amp;ceid=BE%3Anl" title="Google Nieuws: leren leren" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<iframe class="wall-screen" id="screenLevelXNews" src="https://news.google.com/search?q=%22Level+X%22+Hasselt&amp;hl=nl&amp;gl=BE&amp;ceid=BE%3Anl" title="Google Nieuws: Level X Hasselt" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="vignette"></div>
 <header><div class="eyebrow">Centrale hal</div><h1>Leerruimte</h1><div class="sub">Kies een vak en stap de kamer binnen</div></header>
 <div class="info"><strong>15 × 20 meter · 6 meter hoog</strong><br><span class="coords" id="coords">Positie 0,0 m</span><br>Deuren naar aparte vakruimtes<br><a class="site-link" href="https://www.levelx.be/" target="_blank" rel="noopener">Open Level X apart ↗</a></div>
 <div class="help"><span class="key">↑</span> vooruit &nbsp;<span class="key">↓</span> achteruit &nbsp;<span class="key">←</span><span class="key">→</span> zijwaarts &nbsp; sleep om rond te kijken · klik op een deur om binnen te gaan</div>
@@ -65,7 +69,7 @@ function render(){
  poly([[-2.8,HEIGHT-.025,-5.6],[2.8,HEIGHT-.025,-5.6],[2.8,HEIGHT-.025,5.6],[-2.8,HEIGHT-.025,5.6]],'rgba(247,239,212,.68)');
  // Warm reflection in the otherwise calm polished floor.
  const glow=ctx.createRadialGradient(W*.5,H*.72,0,W*.5,H*.72,Math.max(W,H)*.62);glow.addColorStop(0,'rgba(255,242,205,.10)');glow.addColorStop(1,'rgba(255,242,205,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
- drawCornerStructures();updateLevelxScreen();
+ drawCornerStructures();updateWallScreens();
  coordLabel.textContent=`Positie ${px.toFixed(1)}, ${pz.toFixed(1)} m`;
 }
 function wallPanel(a,b,z,face){
@@ -129,7 +133,13 @@ function drawCornerStructures(){
 }
 function solveLinearSystem(A,b){const n=b.length,M=A.map((r,i)=>[...r,b[i]]);for(let c=0;c<n;c++){let pivot=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[pivot][c]))pivot=r;if(Math.abs(M[pivot][c])<1e-9)return null;[M[c],M[pivot]]=[M[pivot],M[c]];const d=M[c][c];for(let j=c;j<=n;j++)M[c][j]/=d;for(let r=0;r<n;r++)if(r!==c){const f=M[r][c];for(let j=c;j<=n;j++)M[r][j]-=f*M[c][j]}}return M.map(r=>r[n])}
 function quadTransform(width,height,q){const src=[[0,0],[width,0],[width,height],[0,height]],A=[],b=[];for(let i=0;i<4;i++){const [x,y]=src[i],X=q[i].x,Y=q[i].y;A.push([x,y,1,0,0,0,-X*x,-X*y]);b.push(X);A.push([0,0,0,x,y,1,-Y*x,-Y*y]);b.push(Y)}const h=solveLinearSystem(A,b);if(!h)return 'none';return `matrix3d(${h[0]},${h[3]},0,${h[6]},${h[1]},${h[4]},0,${h[7]},0,0,1,0,${h[2]},${h[5]},0,1)`}
-function updateLevelxScreen(){const frame=document.querySelector('#levelxScreen'),world=screenInnerQuad(ROOM-.25,DEPTH-.25,1,1),p=world.map(v=>project(...v));if(p.some(v=>!v)){frame.style.display='none';return}const top=p.slice(2,4).sort((a,b)=>a.x-b.x),bottom=p.slice(0,2).sort((a,b)=>a.x-b.x);frame.style.display='block';frame.style.transform=quadTransform(1280,720,[top[0],top[1],bottom[1],bottom[0]])}
+const wallScreens=[
+  {id:'screenLevelX',x:-ROOM+.25,z:-DEPTH+.25},
+  {id:'screenHbvl',x:ROOM-.25,z:-DEPTH+.25},
+  {id:'screenLearning',x:-ROOM+.25,z:DEPTH-.25},
+  {id:'screenLevelXNews',x:ROOM-.25,z:DEPTH-.25}
+];
+ function updateWallScreens(){for(const item of wallScreens){const frame=document.getElementById(item.id),world=screenInnerQuad(item.x,item.z,item.x<0?-1:1,item.z<0?-1:1),p=world.map(v=>project(...v));if(p.some(v=>!v)){frame.style.display='none';continue}const top=p.slice(2,4).sort((a,b)=>a.x-b.x),bottom=p.slice(0,2).sort((a,b)=>a.x-b.x);frame.style.display='block';frame.style.transform=quadTransform(1280,720,[top[0],top[1],bottom[1],bottom[0]])}}
 const DOORS=Array(8).fill('-onderwerp-');let activeSubject='';function doorX(i){return -4.9+i*(9.8/(DOORS.length-1))}
 function drawDoor(cx,label){const z=DEPTH-.035,w=.42,bottom=FLOOR_Y,top=1.95;poly([[cx-w,bottom,z],[cx+w,bottom,z],[cx+w,top,z],[cx-w,top,z]],'#927a57','rgba(68,55,39,.85)',1.5);poly([[cx-w+.06,bottom+.05,z-.008],[cx+w-.06,bottom+.05,z-.008],[cx+w-.06,top-.06,z-.008],[cx-w+.06,top-.06,z-.008]],'#3a3329','rgba(232,218,184,.36)',1);poly([[cx-w+.11,bottom+.09,z-.014],[cx+w-.11,bottom+.09,z-.014],[cx+w-.11,top-.12,z-.014],[cx-w+.11,top-.12,z-.014]],'#64543e');const plaque=project(cx,2.13,z-.06);if(plaque){const f=(H*.5)/Math.tan(FOV*.5),pxGap=Math.abs(project(cx+9.8/(DOORS.length-1),2.13,z-.06)?.x-plaque.x)||12,size=Math.max(5,Math.min(11,.15*f/plaque.d,pxGap*.48));ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`600 ${size}px system-ui`;ctx.fillStyle='#f0e3c4';ctx.shadowColor='#1b1a16';ctx.shadowBlur=4;ctx.fillText(label,plaque.x,plaque.y);ctx.restore()}}
 function update(dt){let f=0,s=0;if(keys.has('ArrowUp')||keys.has('w'))f++;if(keys.has('ArrowDown')||keys.has('s'))f--;if(keys.has('ArrowLeft')||keys.has('a'))s--;if(keys.has('ArrowRight')||keys.has('d'))s++;for(const k of held){if(k==='forward')f++;if(k==='back')f--;if(k==='left')s--;if(k==='right')s++}if(f||s){const n=Math.hypot(f,s);f/=n;s/=n;const speed=3.15*dt,dx=Math.sin(yaw)*f+Math.cos(yaw)*s,dz=Math.cos(yaw)*f-Math.sin(yaw)*s;px=Math.max(-ROOM+.65,Math.min(ROOM-.65,px+dx*speed));pz=Math.max(-DEPTH+.65,Math.min(DEPTH-.65,pz+dz*speed))}}
