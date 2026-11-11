@@ -63,6 +63,7 @@ function render(){
  poly([[-2.8,HEIGHT-.025,-5.6],[2.8,HEIGHT-.025,-5.6],[2.8,HEIGHT-.025,5.6],[-2.8,HEIGHT-.025,5.6]],'rgba(247,239,212,.68)');
  // Warm reflection in the otherwise calm polished floor.
  const glow=ctx.createRadialGradient(W*.5,H*.72,0,W*.5,H*.72,Math.max(W,H)*.62);glow.addColorStop(0,'rgba(255,242,205,.10)');glow.addColorStop(1,'rgba(255,242,205,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+ drawCornerStructures();
  coordLabel.textContent=`Positie ${px.toFixed(1)}, ${pz.toFixed(1)} m`;
 }
 function wallPanel(a,b,z,face){
@@ -104,6 +105,24 @@ function drawAffine(img,v,dst,sx,sy,sw,sh){
  const [p0,p1,p2]=v.map(x=>x.u),[q0,q1,q2]=dst,den=p0[0]*(p1[1]-p2[1])+p1[0]*(p2[1]-p0[1])+p2[0]*(p0[1]-p1[1]);if(Math.abs(den)<1e-5)return;
  const coeff=(k)=>[(q0[k]*(p1[1]-p2[1])+q1[k]*(p2[1]-p0[1])+q2[k]*(p0[1]-p1[1]))/den,(q0[k]*(p2[0]-p1[0])+q1[k]*(p0[0]-p2[0])+q2[k]*(p1[0]-p0[0]))/den,(q0[k]*(p1[0]*p2[1]-p2[0]*p1[1])+q1[k]*(p2[0]*p0[1]-p0[0]*p2[1])+q2[k]*(p0[0]*p1[1]-p1[0]*p0[1]))/den],X=coeff('x'),Y=coeff('y');
  ctx.save();ctx.beginPath();ctx.moveTo(q0.x,q0.y);ctx.lineTo(q1.x,q1.y);ctx.lineTo(q2.x,q2.y);ctx.closePath();ctx.clip();ctx.transform(X[0],Y[0],X[1],Y[1],X[2],Y[2]);ctx.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);ctx.restore();
+}
+function drawCornerStructures(){
+ const half=.25,items=[];
+ for(const sx of [-1,1])for(const sz of [-1,1]){const x0=sx<0?-ROOM:ROOM-half,x1=x0+half*2,z0=sz<0?-ROOM:ROOM-half,z1=z0+half*2,cx=(x0+x1)/2,cz=(z0+z1)/2;items.push({sx,sz,x0,x1,z0,z1,cx,cz,d:(cx-px)**2+(cz-pz)**2})}
+ items.sort((a,b)=>b.d-a.d);
+ for(const c of items){
+   const xFace=px>c.cx?c.x1:c.x0,zFace=pz>c.cz?c.z1:c.z0;
+   poly([[xFace,FLOOR_Y,c.z0],[xFace,FLOOR_Y,c.z1],[xFace,HEIGHT,c.z1],[xFace,HEIGHT,c.z0]],'#76563d','rgba(38,30,23,.65)',1);
+   poly([[c.x0,FLOOR_Y,zFace],[c.x1,FLOOR_Y,zFace],[c.x1,HEIGHT,zFace],[c.x0,HEIGHT,zFace]],'#98744e','rgba(38,30,23,.65)',1);
+   const nx=-c.sx/Math.SQRT2,nz=-c.sz/Math.SQRT2,tx=nz,tz=-nx,w=2.15,bottom=3.72,top=bottom+w*9/16,offset=.88;
+   const at=(side,y,extra=0)=>[c.cx+nx*(offset+extra)+tx*side*w/2,y,c.cz+nz*(offset+extra)+tz*side*w/2];
+   // Two dark suspension arms connect each screen to the corner post.
+   for(const side of [-.34,.34]){const target=[c.cx+nx*(offset-.08)+tx*side,top+.025,c.cz+nz*(offset-.08)+tz*side];line([c.cx,HEIGHT-.12,c.cz],target,'#252b2b',5);line([c.cx,HEIGHT-.12,c.cz],target,'rgba(191,177,145,.65)',1)}
+   const outer=[at(-1, bottom),at(1,bottom),at(1,top),at(-1,top)];poly(outer,'#202627','rgba(183,193,188,.8)',1.2);
+   const inset=.065,inner=[at(-1+2*inset/w,bottom+inset,.012),at(1-2*inset/w,bottom+inset,.012),at(1-2*inset/w,top-inset,.012),at(-1+2*inset/w,top-inset,.012)];poly(inner,'#071114','rgba(75,112,118,.55)',.8);
+   // A dim glass sheen keeps the screens visibly powered off and ready for later feeds.
+   line(at(-.78,top-.16,.02),at(.18,top-.16,.02),'rgba(150,195,199,.17)',1);
+ }
 }
 const DOORS=Array(6).fill('-onderwerp-');let activeSubject='';
 function drawDoor(cx,label){const z=ROOM-.035,w=.5,bottom=FLOOR_Y,top=2.1;poly([[cx-w,bottom,z],[cx+w,bottom,z],[cx+w,top,z],[cx-w,top,z]],'#927a57','rgba(68,55,39,.85)',1.5);poly([[cx-w+.07,bottom+.06,z-.008],[cx+w-.07,bottom+.06,z-.008],[cx+w-.07,top-.07,z-.008],[cx-w+.07,top-.07,z-.008]],'#3a3329','rgba(232,218,184,.36)',1);poly([[cx-w+.12,bottom+.1,z-.014],[cx+w-.12,bottom+.1,z-.014],[cx+w-.12,top-.13,z-.014],[cx-w+.12,top-.13,z-.014]],'#64543e');const plaque=project(cx,2.33,z-.06);if(plaque){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`600 ${Math.max(8,Math.min(14,plaque.d*1.55))}px system-ui`;ctx.fillStyle='#f0e3c4';ctx.shadowColor='#1b1a16';ctx.shadowBlur=5;ctx.fillText(label,plaque.x,plaque.y);ctx.restore()}}
