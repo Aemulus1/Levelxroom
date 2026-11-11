@@ -114,10 +114,10 @@ function drawCornerStructures(){
    const xFace=px>c.cx?c.x1:c.x0,zFace=pz>c.cz?c.z1:c.z0;
    poly([[xFace,FLOOR_Y,c.z0],[xFace,FLOOR_Y,c.z1],[xFace,HEIGHT,c.z1],[xFace,HEIGHT,c.z0]],'#76563d','rgba(38,30,23,.65)',1);
    poly([[c.x0,FLOOR_Y,zFace],[c.x1,FLOOR_Y,zFace],[c.x1,HEIGHT,zFace],[c.x0,HEIGHT,zFace]],'#98744e','rgba(38,30,23,.65)',1);
-   const nx=-c.sx/Math.SQRT2,nz=-c.sz/Math.SQRT2,tx=nz,tz=-nx,w=2.15,bottom=3.72,top=bottom+w*9/16,offset=.88;
+   const nx=-c.sx/Math.SQRT2,nz=-c.sz/Math.SQRT2,tx=nz,tz=-nx,w=2.15,bottom=1.05,top=bottom+w*9/16,offset=.88;
    const at=(side,y,extra=0)=>[c.cx+nx*(offset+extra)+tx*side*w/2,y,c.cz+nz*(offset+extra)+tz*side*w/2];
    // Two dark suspension arms connect each screen to the corner post.
-   for(const side of [-.34,.34]){const target=[c.cx+nx*(offset-.08)+tx*side,top+.025,c.cz+nz*(offset-.08)+tz*side];line([c.cx,HEIGHT-.12,c.cz],target,'#252b2b',5);line([c.cx,HEIGHT-.12,c.cz],target,'rgba(191,177,145,.65)',1)}
+   for(const side of [-.34,.34]){const target=[c.cx+nx*(offset-.08)+tx*side,top+.025,c.cz+nz*(offset-.08)+tz*side],anchor=[c.cx,top+.52,c.cz];line(anchor,target,'#252b2b',5);line(anchor,target,'rgba(191,177,145,.65)',1)}
    const outer=[at(-1, bottom),at(1,bottom),at(1,top),at(-1,top)];poly(outer,'#202627','rgba(183,193,188,.8)',1.2);
    const inset=.065,inner=[at(-1+2*inset/w,bottom+inset,.012),at(1-2*inset/w,bottom+inset,.012),at(1-2*inset/w,top-inset,.012),at(-1+2*inset/w,top-inset,.012)];poly(inner,'#071114','rgba(75,112,118,.55)',.8);
    // A dim glass sheen keeps the screens visibly powered off and ready for later feeds.
