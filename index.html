@@ -19,6 +19,7 @@ function paintWallpaperWallColumn(i,sw,top,wh,side,a,d,v){
  }
 }
 let floorCanvas=null,floorCtx=null,floorTextureData=null,floorImageData=null,floorW=0,floorH=0;
+let ceilingCanvas=null,ceilingCtx=null,ceilingW=0,ceilingH=0;
 function drawFloor(horizon,focal){
  const tex=document.getElementById('woodTex');
  if(!tex||!tex.complete||!tex.naturalWidth)return;
@@ -68,22 +69,46 @@ if(hit===2){
   g.fillStyle=`rgb(${pr},${pg},${pb})`;
   g.fillRect(i*sw,top,sw+1,wh);
 }else if(isWin){paintWallpaperWallColumn(i,sw,top,wh,side,a,d,v);const focalWin=(W*.5)/Math.tan((Math.PI/3)/2),camZWin=1.65;let winTop=hor-(6.30-camZWin)*focalWin/Math.max(.15,d),winBottom=hor-(3.30-camZWin)*focalWin/Math.max(.15,d),whi=Math.max(1,winBottom-winTop);const env=document.getElementById('sky360');if(env&&env.complete&&env.naturalWidth){const wa=(a%(Math.PI*2)+Math.PI*2)%(Math.PI*2),repeat=8,local=(wa/(Math.PI*2)*repeat)%1,u=Math.floor(local*(env.naturalWidth-1));g.drawImage(env,u,0,1,env.naturalHeight,i*sw,winTop,sw+1,whi)}else{g.fillStyle='#7fc1e5';g.fillRect(i*sw,winTop,sw+1,whi)}const edge=Math.max(2,whi*.025);g.fillStyle='#eee6d5';g.fillRect(i*sw,winTop,sw+1,edge);g.fillRect(i*sw,winBottom-edge,sw+1,edge);const spans=side?[[6.7,9.3],[22.7,25.3]]:[[5.7,8.3],[15.7,18.3]];if(spans.some(q=>Math.abs(wallPos-q[0])<.09||Math.abs(wallPos-q[1])<.09)){g.fillStyle='#eee6d5';g.fillRect(i*sw,winTop,sw+1,whi)}}else{paintWallpaperWallColumn(i,sw,top,wh,side,a,d,v);}}
- // Plafond is een horizontaal vlak op 7.6 m. De 8 koepels hebben VASTE wereldcoordinaten.
+ // Plafond en koepels blijven wereldvast, maar worden op een tussenlaag getekend.
+ // Vloeiende opschaling verzacht de rasterrand zonder pixel-voor-pixel raycasts.
  const camZ=1.65,ceilZ=7.6;
  const domes=[{x:5.2,y:6.2},{x:12.4,y:6.2},{x:19.6,y:6.2},{x:26.8,y:6.2},{x:5.2,y:17.8},{x:12.4,y:17.8},{x:19.6,y:17.8},{x:26.8,y:17.8}];
- // screen y boven horizon -> kijkstraal omhoog -> snijpunt plafond.
- const step=4;
- for(let sy=0;sy<Math.max(0,hor);sy+=step){let slope=(hor-sy)/focal;if(slope<.02)continue;let fwd=(ceilZ-camZ)/slope;if(fwd>45)continue;for(let sx=0;sx<W;sx+=step){let lat=(sx-W*.5)/focal*fwd,wx=p.x+Math.cos(p.a)*fwd+Math.cos(p.a+Math.PI/2)*lat,wy=p.y+Math.sin(p.a)*fwd+Math.sin(p.a+Math.PI/2)*lat;if(wx<0||wy<0||wx>MW||wy>MH)continue;let inside=false;for(const d of domes){if(((wx-d.x)/1.65)**2+((wy-d.y)/1.65)**2<1){inside=true;break}}if(inside){const env=document.getElementById('sky360');if(env&&env.complete&&env.naturalWidth){
-  // Koepels: neem een echte 2D uitsnede uit de foto, geen rek van een enkele pixel.
-  const dx=wx-p.x,dy=wy-p.y;
-  const wa=(Math.atan2(dy,dx)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
-  const repeat=8,local=(wa/(Math.PI*2)*repeat)%1;
-  const patch=8;
-  const u=Math.max(0,Math.min(env.naturalWidth-patch-1,Math.floor(local*(env.naturalWidth-patch))));
-  const radial=Math.min(1,Math.hypot(dx,dy)/25);
-  const vv=Math.max(0,Math.min(env.naturalHeight-patch-1,Math.floor(env.naturalHeight*(.08+.42*radial))));
-  g.drawImage(env,u,vv,patch,patch,sx,sy,step+1,step+1)
- }else{g.fillStyle='#82c5e7';g.fillRect(sx,sy,step+1,step+1)}}else{let q=232+Math.sin(wx*.55+wy*.42)*3;g.fillStyle=`rgb(${q},${q-1},${q-5})`;g.fillRect(sx,sy,step+1,step+1)}}}
+ const step=3,cw=Math.max(1,Math.ceil(W/step)),ch=Math.max(1,Math.ceil(H/step));
+ if(!ceilingCanvas||cw!==ceilingW||ch!==ceilingH){
+  ceilingCanvas=document.createElement('canvas');ceilingCanvas.width=ceilingW=cw;ceilingCanvas.height=ceilingH=ch;
+  ceilingCtx=ceilingCanvas.getContext('2d');
+ }
+ ceilingCtx.clearRect(0,0,cw,ch);
+ ceilingCtx.fillStyle='#deddd8';ceilingCtx.fillRect(0,0,cw,Math.ceil(hor/step));
+ for(let sy=0;sy<Math.max(0,hor);sy+=step){
+  let slope=(hor-sy)/focal;if(slope<.02)continue;
+  let fwd=(ceilZ-camZ)/slope;if(fwd>45)continue;
+  for(let sx=0;sx<W;sx+=step){
+   let lat=(sx-W*.5)/focal*fwd;
+   let wx=p.x+Math.cos(p.a)*fwd+Math.cos(p.a+Math.PI/2)*lat;
+   let wy=p.y+Math.sin(p.a)*fwd+Math.sin(p.a+Math.PI/2)*lat;
+   if(wx<0||wy<0||wx>MW||wy>MH)continue;
+   let inside=false;
+   for(const d of domes){if(((wx-d.x)/1.65)**2+((wy-d.y)/1.65)**2<1){inside=true;break}}
+   const px=Math.floor(sx/step),py=Math.floor(sy/step);
+   if(inside){
+    const env=document.getElementById('sky360');
+    if(env&&env.complete&&env.naturalWidth){
+     const dx=wx-p.x,dy=wy-p.y;
+     const wa=(Math.atan2(dy,dx)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+     const repeat=8,local=(wa/(Math.PI*2)*repeat)%1,patch=8;
+     const u=Math.max(0,Math.min(env.naturalWidth-patch-1,Math.floor(local*(env.naturalWidth-patch))));
+     const radial=Math.min(1,Math.hypot(dx,dy)/25);
+     const vv=Math.max(0,Math.min(env.naturalHeight-patch-1,Math.floor(env.naturalHeight*(.08+.42*radial))));
+     ceilingCtx.drawImage(env,u,vv,patch,patch,px,py,1,1);
+    }else{ceilingCtx.fillStyle='#82c5e7';ceilingCtx.fillRect(px,py,1,1)}
+   }else{
+    let q=232+Math.sin(wx*.55+wy*.42)*3;
+    ceilingCtx.fillStyle=`rgb(${q},${q-1},${q-5})`;ceilingCtx.fillRect(px,py,1,1);
+   }
+  }
+ }
+ const smooth=g.imageSmoothingEnabled;g.imageSmoothingEnabled=true;g.drawImage(ceilingCanvas,0,0,W,H);g.imageSmoothingEnabled=smooth;
 } 
 function proj(o){let dx=o.x-p.x,dy=o.y-p.y,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx)-p.a;while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;const F=Math.PI/3;if(Math.abs(a)>F*.7)return null;let x=(.5+a/F)*W,ri=Math.max(0,Math.min(dep.length-1,Math.floor(x/W*dep.length)));if(d>dep[ri]+.6)return null;return{x,d,s:H/d}}
 function objs(){for(const v of O.map(o=>({o,p:proj(o)})).filter(x=>x.p).sort((a,b)=>b.p.d-a.p.d)){let {o,p}=v,x=p.x;if(o.type==='door'){let w=p.s*.72,h=p.s*1.45,l=x-w/2,t=H*(.61+p.pitch*.52)-h*.62;g.fillStyle='#23323a';g.fillRect(l,t,w,h);g.strokeStyle='#9aaeb5';g.lineWidth=Math.max(1,3/p.d)*D;g.strokeRect(l,t,w,h);g.fillStyle='#eaf4f5';g.font=`700 ${Math.max(8,p.s*.13)}px Segoe UI`;g.textAlign='center';g.fillText(o.label.toUpperCase(),x,t+h*.28,w*.86)}else if(o.type==='window'){let w=p.s*1.15,h=p.s*1.65,l=x-w/2,t=H*(.61+p.pitch*.52)-h*.68,gr=g.createLinearGradient(0,t,0,t+h);gr.addColorStop(0,'#faffff');gr.addColorStop(.5,'#a6def2');gr.addColorStop(1,'#e5f7f9');g.fillStyle=gr;g.fillRect(l,t,w,h);g.strokeStyle='#d7edf1';g.lineWidth=3*D;g.strokeRect(l,t,w,h)}else{let w=p.s*1.1,h=p.s*.62,l=x-w/2,t=H*(.61+p.pitch*.52)-h*.8;g.fillStyle='#326c83';g.fillRect(l,t,w,h);g.strokeStyle='#c7f8ff';g.strokeRect(l,t,w,h);g.fillStyle='white';g.font=`700 ${Math.max(8,p.s*.13)}px Segoe UI`;g.textAlign='center';g.fillText(o.label,x,t+h*.58,w*.9)}}}
